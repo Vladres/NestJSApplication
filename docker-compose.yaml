@@ -2,7 +2,9 @@ version: "3.7"
 services:
   test-application-db:
     container_name: test-application-db
-    image: postgres:13
+    image: postgres:14
+    ports:
+      - '5434:5432'
     environment:
       POSTGRES_DB: test-application-db
       POSTGRES_USER: test_application_user

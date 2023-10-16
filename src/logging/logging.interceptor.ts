@@ -31,12 +31,9 @@ export class LoggingInterceptor implements NestInterceptor {
           httpStatus,
         };
 
-        console.log(data);
         this.sendLoggingRequest(data);
       }),
       catchError((error) => {
-        // Handle and log errors
-
         const data: LoggingDataDto = {
           duration: this.getDuration(startTime),
           requestData,

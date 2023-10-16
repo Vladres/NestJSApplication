@@ -1,61 +1,79 @@
-import {
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-} from '@nestjs/common';
-import { Pool } from 'pg';
-import { PG_CONNECTION } from '../db';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CityMembersDto, CityPopulationDto, PopulationDto } from './dto';
+import { ResidentEntity } from './entities';
+import { IRawCityMember } from './contracts';
 
 @Injectable()
 export class PopulationService {
-  constructor(@Inject(PG_CONNECTION) private conn: Pool) {}
+  constructor(
+    @InjectRepository(ResidentEntity)
+    private residentRepository: Repository<ResidentEntity>,
+  ) {}
+
+  protected mapToCityMembersDto(
+    rawCityMembers: IRawCityMember[],
+  ): CityMembersDto[] {
+    const cityMembersMap = new Map<string, CityMembersDto>();
+
+    rawCityMembers.forEach((row) => {
+      const { city, first_name, count } = row;
+
+      if (cityMembersMap.has(city)) {
+        cityMembersMap.get(city).members.push({ first_name, count });
+      } else {
+        cityMembersMap.set(city, { city, members: [{ first_name, count }] });
+      }
+    });
+
+    return Array.from(cityMembersMap.values());
+  }
 
   protected async getFilteredCityMembers(
     partialCityName: string = '',
   ): Promise<CityMembersDto[]> {
-    try {
-      const query = `
-        SELECT cities.name AS city, residents.first_name, COUNT(residents.id) AS count
-        FROM residents
-        INNER JOIN cities ON residents.city_id = cities.id
-        WHERE cities.name ILIKE '%${partialCityName}%'
-        GROUP BY cities.name, residents.first_name;
-      `;
-
-      const cityMembers = await this.conn.query<CityMembersDto>(query);
-      return cityMembers.rows;
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Unable to fetch city members.',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+    const rawCityMembers: IRawCityMember[] =
+      await this.residentRepository.query(
+        `
+      SELECT cities.name AS city, residents.first_name AS first_name, COUNT(residents.id) AS count
+      FROM
+        residents
+      INNER JOIN
+        cities ON residents.city_id = cities.id
+      WHERE
+        cities.name ILIKE $1
+      GROUP BY
+        cities.name, residents.first_name;
+      `,
+        [`%${partialCityName}%`],
       );
-    }
+
+    /**
+     * As of my last knowledge update in September 2021, PostgreSQL does not support directly nesting aggregate functions,
+     * regardless of the version. This means you cannot directly use an aggregate function (e.g., json_agg)
+     * within another aggregate function in a single SQL query
+     * */
+    return this.mapToCityMembersDto(rawCityMembers);
   }
 
   protected async getFilteredCitiesPopulation(
     partialCityName: string = '',
   ): Promise<CityPopulationDto[]> {
-    try {
-      const query = `
-        SELECT cities.name AS city, COUNT(residents.id) AS count
-        FROM residents
-        INNER JOIN cities ON residents.city_id = cities.id
-        WHERE cities.name ILIKE '%${partialCityName}%'
-        GROUP BY cities.name
-        ORDER BY count DESC;
-      `;
+    const query = `
+      SELECT cities.name, COUNT(residents.id) AS count
+      FROM residents
+      INNER JOIN cities ON residents.city_id = cities.id
+      WHERE cities.name ILIKE $1
+      GROUP BY cities.name
+      ORDER BY count DESC;
+    `;
 
-      const filteredCitiesPopulation =
-        await this.conn.query<CityPopulationDto>(query);
-      return filteredCitiesPopulation.rows;
-    } catch (error) {
-      throw new InternalServerErrorException(
-        error.message || 'Unable to fetch filtered cities population.',
-      );
-    }
+    const filteredCitiesPopulation = await this.residentRepository.query(
+      query,
+      [`%${partialCityName}%`],
+    );
+    return filteredCitiesPopulation;
   }
 
   public async getPopulationData(
