@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
 import { LoggingDataDto } from './dto';
 
 @Injectable()
@@ -24,17 +24,34 @@ export class LoggingInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       tap((responseData: unknown) => {
-        const duration = new Date().getTime() - startTime;
         const data: LoggingDataDto = {
-          duration,
+          duration: this.getDuration(startTime),
           requestData,
           responseData,
           httpStatus,
         };
 
+        console.log(data);
         this.sendLoggingRequest(data);
       }),
+      catchError((error) => {
+        // Handle and log errors
+
+        const data: LoggingDataDto = {
+          duration: this.getDuration(startTime),
+          requestData,
+          responseData: error.message,
+          httpStatus: error.status,
+        };
+
+        this.sendLoggingRequest(data);
+        return of(error);
+      }),
     );
+  }
+
+  private getDuration(startTime: number): number {
+    return new Date().getTime() - startTime;
   }
 
   private async sendLoggingRequest(data: LoggingDataDto): Promise<void> {

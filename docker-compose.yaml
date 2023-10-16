@@ -1,0 +1,9 @@
+version: "3.7"
+services:
+  test-application-db:
+    container_name: test-application-db
+    image: postgres:13
+    environment:
+      POSTGRES_DB: test-application-db
+      POSTGRES_USER: test_application_user
+      POSTGRES_PASSWORD: test_application_password

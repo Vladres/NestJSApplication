@@ -11,8 +11,13 @@ export class LoggingController {
     status: HttpStatus.OK,
     description: 'OK',
   })
-  saveLog(@Body() loggingData: LoggingDataDto): Promise<void> {
+  async saveLog(@Body() loggingData: LoggingDataDto): Promise<void> {
+    // Add a delay of 1 second (1000 milliseconds)
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     console.log('Logger endpoint, data: ', loggingData);
-    return;
+
+    // Returning a resolved Promise to indicate completion
+    return Promise.resolve();
   }
 }
