@@ -4,43 +4,44 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import axios from 'axios';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
-import { ILoggingData } from './contracts';
+import { LoggingDataDto } from './dto';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
+  constructor(private readonly configService: ConfigService) {}
+
   async intercept(
     context: ExecutionContext,
     next: CallHandler,
   ): Promise<Observable<unknown>> {
     const startTime = new Date().getTime();
+    const { body: requestData } = context.switchToHttp().getRequest();
+    const { statusCode: httpStatus } = context.switchToHttp().getResponse();
 
     return next.handle().pipe(
-      tap(() => {
-        const requestDuration = new Date().getTime() - startTime;
-        const { body: requestData } = context.switchToHttp().getRequest();
-        const { body: responseData, statusCode: httpStatus } = context
-          .switchToHttp()
-          .getResponse();
-
-        console.log(responseData);
-        this.sendLoggingRequest({
-          duration: requestDuration,
+      tap((responseData: unknown) => {
+        const duration = new Date().getTime() - startTime;
+        const data: LoggingDataDto = {
+          duration,
           requestData,
           responseData,
           httpStatus,
-        });
+        };
+
+        this.sendLoggingRequest(data);
       }),
     );
   }
 
-  private async sendLoggingRequest(data: ILoggingData) {
+  private async sendLoggingRequest(data: LoggingDataDto): Promise<void> {
     try {
-      // await axios.post('http://localhost:3000/logging', data);
-      console.log(data);
+      await axios.post(this.configService.get('LOGGING_URL'), data);
     } catch (error) {
-      console.error('Error sending logging request:', error);
+      console.error('Error sending logging request');
     }
   }
 }

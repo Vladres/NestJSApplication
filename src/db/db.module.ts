@@ -9,13 +9,6 @@ import { PG_CONNECTION } from './contracts';
     {
       provide: PG_CONNECTION,
       useFactory: async (configService: ConfigService) => {
-        console.log({
-          user: configService.get<string>('DB_USER'),
-          host: configService.get<string>('DB_HOST'),
-          database: configService.get<string>('DB_NAME'),
-          password: configService.get<string>('DB_PASSWORD'),
-          port: configService.get<number>('DB_PORT'),
-        })
         return new Pool({
           user: configService.get<string>('DB_USER'),
           host: configService.get<string>('DB_HOST'),
@@ -27,6 +20,6 @@ import { PG_CONNECTION } from './contracts';
       inject: [ConfigService],
     },
   ],
-  exports: [PG_CONNECTION],
+  exports: [PG_CONNECTION, ConfigModule],
 })
 export class DBModule {}

@@ -16,12 +16,6 @@ import { PopulationService } from './population.service';
 export class PopulationController {
   constructor(private readonly populationService: PopulationService) {}
 
-  @Get('test')
-  @UseInterceptors(LoggingInterceptor)
-  getHello() {
-    return { test: 'test' };
-  }
-
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

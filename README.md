@@ -1,3 +1,5 @@
+DB CREATION DATA
+
 CREATE TABLE "cities" (
 "id" SERIAL NOT NULL,
 "name" character varying NOT NULL,

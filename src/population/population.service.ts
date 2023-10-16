@@ -1,4 +1,10 @@
-import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { Pool } from 'pg';
 import { PG_CONNECTION } from '../db';
 import { CityMembersDto, CityPopulationDto, PopulationDto } from './dto';
@@ -46,9 +52,8 @@ export class PopulationService {
         await this.conn.query<CityPopulationDto>(query);
       return filteredCitiesPopulation.rows;
     } catch (error) {
-      throw new HttpException(
+      throw new InternalServerErrorException(
         error.message || 'Unable to fetch filtered cities population.',
-        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -66,9 +71,8 @@ export class PopulationService {
         city_members: cityMembers,
       };
     } catch (error) {
-      throw new HttpException(
+      throw new InternalServerErrorException(
         error.message || 'Unable to fetch population.',
-        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
